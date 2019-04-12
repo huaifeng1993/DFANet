@@ -41,39 +41,43 @@ class Block(nn.Module):
             self.skip = None
 
         self.relu = nn.ReLU(inplace=False)
+
+        first_conv=[]
+
         rep = []
 
 
         #Deep SeparableConv1
         if start_with_relu:
-            rep.append(self.relu)
-            rep.append(SeparableConv2d(inplanes, planes//4, 3, 1, dilation))
-            rep.append(nn.BatchNorm2d(planes//4))
-            rep.append(self.relu)
+            first_conv.append(nn.ReLU())
+            first_conv.append(SeparableConv2d(inplanes, planes//4, 3, 1, dilation))
+            first_conv.append(nn.BatchNorm2d(planes//4))
+            first_conv.append(nn.ReLU())
         if  not start_with_relu:
-            rep.append(SeparableConv2d(inplanes, planes//4, 3, 1, dilation))
-            rep.append(nn.BatchNorm2d(planes//4))
-            rep.append(self.relu)
+            first_conv.append(SeparableConv2d(inplanes, planes//4, 3, 1, dilation))
+            first_conv.append(nn.BatchNorm2d(planes//4))
+            first_conv.append(nn.ReLU())
 
         rep.append(SeparableConv2d(planes//4, planes//4, 3, 1, dilation))
         rep.append(nn.BatchNorm2d(planes//4))
-        rep.append(self.relu)
 
 
         if stride != 1:
-            rep.append(self.relu)
+            rep.append(nn.ReLU())
             rep.append(SeparableConv2d(planes//4, planes, 3, 2))
             rep.append(nn.BatchNorm2d(planes))
 
         if stride == 1 :
-            rep.append(self.relu)
+            rep.append(nn.ReLU())
             rep.append(SeparableConv2d(planes//4, planes, 3, 1))
             rep.append(nn.BatchNorm2d(planes))
 
+        self.first_conv=nn.Sequential(*first_conv)
         self.rep = nn.Sequential(*rep)
 
     def forward(self, inp):
-        x = self.rep(inp)
+        x=self.first_conv(inp)
+        x = self.rep(x) 
 
         if self.skip is not None:
             skip = self.skip(inp)
@@ -101,6 +105,7 @@ class enc(nn.Module):
         rep.append(Block(in_channels, out_channels, stride=2,start_with_relu=False))
         for i in range(rep_nums-1):
             rep.append(Block(out_channels, out_channels, stride=1,start_with_relu=True))
+
         self.reps = nn.Sequential(*rep)
 
     def forward(self, lp):
@@ -114,14 +119,14 @@ class fcattention(nn.Module):
 
         self.fc=nn.Sequential(
             nn.Linear(in_channels,1000,bias=False),
-            nn.ReLU(inplace=True))
+            #nn.ReLU(inplace=True),
+        )
 
         self.conv=nn.Sequential(
             nn.Conv2d(1000,out_channels,kernel_size=1,bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.Sigmoid()
+            nn.ReLU()
         )
-
 
     def forward(self,x):
         b,c,_,_=x.size()
@@ -132,12 +137,11 @@ class fcattention(nn.Module):
         y=self.conv(y)
         return x*y.expand_as(x)
 
-
-class xceptionA(nn.Module):
+class xceptionAx3(nn.Module):
     """
     """
     def __init__(self,num_classes):
-        super(xceptionA, self).__init__()
+        super(xceptionAx3, self).__init__()
         self.conv1=nn.Sequential(nn.Conv2d(in_channels=3,out_channels=8,kernel_size=3,stride=2,padding=1,bias=False),
                                 nn.BatchNorm2d(num_features=8),
                                 nn.ReLU())
@@ -152,29 +156,45 @@ class xceptionA(nn.Module):
         self.enc4a=enc(in_channels=96,out_channels=192,stage=4)
         self.enc4b=enc(in_channels=288,out_channels=192,stage=4)
         self.enc4c=enc(in_channels=288,out_channels=192,stage=4)
+
         self.fca1=fcattention(192,192)
         self.fca2=fcattention(192,192)
         self.fca3=fcattention(192,192)
 
-        self.enc2a_dim_reduction=nn.Conv2d(48,num_classes,kernel_size=1,stride=1,bias=False)
-        self.enc2b_dim_reduction=nn.Conv2d(48,num_classes,kernel_size=1,stride=1,bias=False)
-        self.enc2c_dim_reduction=nn.Conv2d(48,num_classes,kernel_size=1,stride=1,bias=False)
+        #self.
 
-        self.fca1_dim_reduction=nn.Conv2d(192,num_classes,kernel_size=1,stride=1,bias=False)
-        self.fca2_dim_reduction=nn.Conv2d(192,num_classes,kernel_size=1,stride=1,bias=False)
-        self.fca3_dim_reduction=nn.Conv2d(192,num_classes,kernel_size=1,stride=1,bias=False)
+        self.enc2a_to_decoder_dim_reduction=nn.Sequential(nn.Conv2d(48,32,kernel_size=1,stride=1,bias=False),
+                                                          nn.BatchNorm2d(32),
+                                                          nn.ReLU()) 
+        self.enc2b_to_decoder_dim_reduction=nn.Sequential(nn.Conv2d(48,32,kernel_size=1,stride=1,bias=False),
+                                                          nn.BatchNorm2d(32),
+                                                          nn.ReLU()) 
+        self.enc2c_to_decoder_dim_reduction=nn.Sequential(nn.Conv2d(48,32,kernel_size=1,stride=1,bias=False),
+                                                          nn.BatchNorm2d(32),
+                                                          nn.ReLU()) 
 
-        self.merge_conv=nn.Sequential(nn.Conv2d(num_classes,num_classes,kernel_size=1,stride=1,bias=False),
+        self.fca1_to_decoder_dim_reduction=nn.Sequential(nn.Conv2d(192,32,kernel_size=1,stride=1,bias=False),
+                                                          nn.BatchNorm2d(32),
+                                                          nn.ReLU()) 
+        self.fca2_to_decoder_dim_reduction=nn.Sequential(nn.Conv2d(192,32,kernel_size=1,stride=1,bias=False),
+                                                          nn.BatchNorm2d(32),
+                                                          nn.ReLU()) 
+        self.fca3_to_decoder_dim_reduction=nn.Sequential(nn.Conv2d(192,32,kernel_size=1,stride=1,bias=False),
+                                                          nn.BatchNorm2d(32),
+                                                          nn.ReLU()) 
+
+        self.merge_conv=nn.Sequential(nn.Conv2d(32,32,kernel_size=1,stride=1,bias=False),
+                                      nn.BatchNorm2d(32),
+                                      nn.ReLU())
+        self.last_conv=nn.Sequential(nn.Conv2d(32,num_classes,kernel_size=1,stride=1,bias=False),
                                       nn.BatchNorm2d(num_classes),
                                       nn.ReLU())
 
     def forward(self, x):
-
         #backbone stage a
         stage1=self.conv1(x)
-
+        #print("stage1:",stage1.size())
         stage_enc2a=self.enc2a(stage1)
-        #print('stage_enc2a:',stage_enc2a.size())
 
         stage_enc3a=self.enc3a(stage_enc2a)
         #print('stage_enc3a:',stage_enc3a.size())
@@ -183,6 +203,7 @@ class xceptionA(nn.Module):
         #print('stage_enc4a:',stage_enc4a.size())
 
         stage_fca1 =self.fca1(stage_enc4a)
+        #print(stage_fca1.size())
         up_fca1=F.interpolate(stage_fca1,
                                 stage_enc2a.size()[2:],
                                 mode='bilinear',
@@ -192,10 +213,12 @@ class xceptionA(nn.Module):
         
         #stage b
         stage_enc2b=self.enc2b(torch.cat((up_fca1,stage_enc2a),1))
-
+        #print(stage_enc2b.size())
         stage_enc3b=self.enc3b(torch.cat((stage_enc2b,stage_enc3a),1))
+        #print(stage_enc3b.size())
         stage_enc4b=self.enc4b(torch.cat((stage_enc3b,stage_enc4a),1))
         stage_fca2 =self.fca2(stage_enc4b)
+        #print(stage_fca2.size())
         up_fca2=F.interpolate(stage_fca2,
                                 stage_enc2b.size()[2:],
                                 mode='bilinear',
@@ -209,15 +232,15 @@ class xceptionA(nn.Module):
        
 
         #decoder
-        x1=self.enc2a_dim_reduction(stage_enc2a)
+        x1=self.enc2a_to_decoder_dim_reduction(stage_enc2a)
         #print(x1.size())
-        x2=self.enc2b_dim_reduction(stage_enc2b)
+        x2=self.enc2b_to_decoder_dim_reduction(stage_enc2b)
 
         x2_up=F.interpolate(x2,
                         x1.size()[2:],
                         mode='bilinear',
                         align_corners=False)
-        x3=self.enc2c_dim_reduction(stage_enc2c)
+        x3=self.enc2c_to_decoder_dim_reduction(stage_enc2c)
         x3_up=F.interpolate(x3,
                         x1.size()[2:],
                         mode='bilinear',
@@ -227,19 +250,19 @@ class xceptionA(nn.Module):
 
         x_merge=self.merge_conv(x_up)
         #print(x_merge.size())
-        x_fca1=self.fca1_dim_reduction(stage_fca1)
+        x_fca1=self.fca1_to_decoder_dim_reduction(stage_fca1)
         #print(x_fca1.size())
         x_fca1_up=F.interpolate(x_fca1,
                         x1.size()[2:],
                         mode='bilinear',
                         align_corners=False)
-        x_fca2=self.fca2_dim_reduction(stage_fca2)
+        x_fca2=self.fca2_to_decoder_dim_reduction(stage_fca2)
         #print(x_fca2.size())
         x_fca2_up=F.interpolate(x_fca2,
                         x1.size()[2:],
                         mode='bilinear',
                         align_corners=False)
-        x_fca3=self.fca3_dim_reduction(stage_fca3)
+        x_fca3=self.fca3_to_decoder_dim_reduction(stage_fca3)
 
         #print(x_fca3.size())
         x_fca3_up=F.interpolate(x_fca3,
@@ -247,8 +270,11 @@ class xceptionA(nn.Module):
                         mode='bilinear',
                         align_corners=False)
         x_fca_up=x_merge+x_fca1_up+x_fca2_up+x_fca3_up
-        result=F.interpolate(x_fca_up,x.size()[2:],mode='bilinear',align_corners=False)
-
+        #print(x_fca_up.size())
+        result=self.last_conv(x_fca_up)
+        #print(result.size())
+        result=F.interpolate(result,x.size()[2:],mode='bilinear',align_corners=False)
+        #print(result.size())
         return result
 
 if __name__ =="__main__":
@@ -256,11 +282,13 @@ if __name__ =="__main__":
 
     criterion=CrossEntropyLoss()
 
-    net=xceptionA(num_classes=19)
+    net=xceptionAx3(num_classes=20)
+    #net=enc(in_channels=8,out_channels=48,stage=2)
 
     input = torch.randn(4, 3, 1024, 1024)
     outputs=net(input)
 
+    torch.save(net.state_dict(),"model.pth")
     print(outputs.size())
 
 
