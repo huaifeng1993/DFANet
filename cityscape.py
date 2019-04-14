@@ -1,5 +1,5 @@
 # camera-ready
-
+#code borrowed form https://github.com/fregu856/deeplabv3
 import torch
 import torch.utils.data
 
@@ -23,8 +23,8 @@ class DatasetTrain(torch.utils.data.Dataset):
         self.img_h = 1024
         self.img_w = 2048
 
-        self.new_img_h = 512
-        self.new_img_w = 1024
+        self.new_img_h = 1024
+        self.new_img_w = 2048
 
         self.examples = []
         for train_dir in train_dirs:
@@ -54,14 +54,14 @@ class DatasetTrain(torch.utils.data.Dataset):
         # resize img without interpolation (want the image to still match
         # label_img, which we resize below):
         img = cv2.resize(img, (self.new_img_w, self.new_img_h),
-                         interpolation=cv2.INTER_NEAREST) # (shape: (512, 1024, 3))
+                         interpolation=cv2.INTER_NEAREST) # (shape: (1024, 1024, 3))
 
         label_img_path = example["label_img_path"]
         label_img = cv2.imread(label_img_path, -1) # (shape: (1024, 2048))
         # resize label_img without interpolation (want the resulting image to
         # still only contain pixel values corresponding to an object class):
         label_img = cv2.resize(label_img, (self.new_img_w, self.new_img_h),
-                               interpolation=cv2.INTER_NEAREST) # (shape: (512, 1024))
+                               interpolation=cv2.INTER_NEAREST) # (shape: (1024, 1024))
 
         # flip the img and the label with 0.5 probability:
         flip = np.random.randint(low=0, high=2)
@@ -72,7 +72,7 @@ class DatasetTrain(torch.utils.data.Dataset):
         ########################################################################
         # randomly scale the img and the label:
         ########################################################################
-        scale = np.random.uniform(low=0.7, high=2.0)
+        scale = np.random.uniform(low=0.75, high=1.75)
         new_img_h = int(scale*self.new_img_h)
         new_img_w = int(scale*self.new_img_w)
 
@@ -100,24 +100,25 @@ class DatasetTrain(torch.utils.data.Dataset):
         # # # # # # # # # debug visualization END
 
         ########################################################################
-        # select a 256x256 random crop from the img and label:
+        # select a 1024x1024 random crop from the img and label:
         ########################################################################
-        start_x = np.random.randint(low=0, high=(new_img_w - 256))
-        end_x = start_x + 256
-        start_y = np.random.randint(low=0, high=(new_img_h - 256))
-        end_y = start_y + 256
+        start_x = np.random.randint(low=0, high=(new_img_w - 512))
+        end_x = start_x + 512
+        start_y = np.random.randint(low=0, high=(new_img_h - 512))
+        #start_y = 0
+        end_y = start_y + 512
 
-        img = img[start_y:end_y, start_x:end_x] # (shape: (256, 256, 3))
-        label_img = label_img[start_y:end_y, start_x:end_x] # (shape: (256, 256))
+        img = img[start_y:end_y, start_x:end_x] # (shape: (1024, 1024, 3))
+        label_img = label_img[start_y:end_y, start_x:end_x] # (shape: (1024, 1024))
         ########################################################################
 
         # # # # # # # # debug visualization START
         # print (img.shape)
         # print (label_img.shape)
-        #
+        
         # cv2.imshow("test", img)
         # cv2.waitKey(0)
-        #
+        
         # cv2.imshow("test", label_img)
         # cv2.waitKey(0)
         # # # # # # # # debug visualization END
@@ -125,13 +126,13 @@ class DatasetTrain(torch.utils.data.Dataset):
         # normalize the img (with the mean and std for the pretrained ResNet):
         img = img/255.0
         img = img - np.array([0.485, 0.456, 0.406])
-        img = img/np.array([0.229, 0.224, 0.225]) # (shape: (256, 256, 3))
-        img = np.transpose(img, (2, 0, 1)) # (shape: (3, 256, 256))
+        img = img/np.array([0.229, 0.224, 0.225]) # (shape: (1024, 1024, 3))
+        img = np.transpose(img, (2, 0, 1)) # (shape: (3, 1024, 1024))
         img = img.astype(np.float32)
 
         # convert numpy -> torch:
-        img = torch.from_numpy(img) # (shape: (3, 256, 256))
-        #label_img = torch.from_numpy(label_img) # (shape: (256, 256))
+        img = torch.from_numpy(img) # (shape: (3, 1024, 1024))
+        #label_img = torch.from_numpy(label_img) # (shape: (1024, 1024))
         label_img=torch.LongTensor(label_img)
         return (img, label_img)
 
@@ -312,14 +313,17 @@ if __name__=='__main__':
                              cityscapes_meta_path="/home/shen/Data/DataSet/Cityscape/gtFine")
 
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                           batch_size=8, shuffle=True,
+                                           batch_size=1, shuffle=True,
                                            num_workers=1)
     val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
                                          batch_size=8, shuffle=False,
                                          num_workers=1)
 
+    # for img,lab in train_loader:
+    #     print(img.size(),lab.size())
+
     img,labs=train_dataset[0]
     print(labs.size())
 
-    img,labs,ids=val_dataset[0]
-    print(labs.size())
+    img,labs=val_dataset[0]
+    print(labs.size())     

@@ -8,8 +8,9 @@ from criterion import CriterionDSN, CriterionOhemDSN
 from torch.nn import CrossEntropyLoss
 import torch.optim as optim
 from torch.optim import lr_scheduler
-from model.dfanet import xceptionA
+from model.dfanet import xceptionAx3
 from config import Config
+
 #from pspnet import Res_Deeplab
 
 if __name__=='__main__':
@@ -21,13 +22,13 @@ if __name__=='__main__':
     val_dataset = DatasetVal(cityscapes_data_path="/home/shen/Data/DataSet/Cityscape",
                              cityscapes_meta_path="/home/shen/Data/DataSet/Cityscape/gtFine")
     train_loader = DataLoader(dataset=train_dataset,
-                                           batch_size=48, shuffle=True,
+                                           batch_size=12, shuffle=True,
                                            num_workers=4)
     val_loader = DataLoader(dataset=val_dataset,
                                          batch_size=24, shuffle=False, 
                                          num_workers=4)
    
-    net = xceptionA(num_classes=20)
+    net = xceptionAx3(num_classes=20)
   
     #load loss
     criterion = CrossEntropyLoss()
@@ -38,6 +39,6 @@ if __name__=='__main__':
 
     trainer = Trainer('training', optimizer,exp_lr_scheduler, net, cfg, './log')
     #trainer.load_weights(trainer.find_last())
-    trainer.train(train_loader, val_loader, criterion, 100)
+    trainer.train(train_loader, val_loader, criterion, 1000)
     #trainer.evaluate(valid_loader)
     print('Finished Training')
