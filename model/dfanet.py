@@ -39,9 +39,6 @@ class Block(nn.Module):
             self.skipbn = nn.BatchNorm2d(planes)
         else:
             self.skip = None
-
-        self.relu = nn.ReLU(inplace=False)
-
         first_conv=[]
 
         rep = []
