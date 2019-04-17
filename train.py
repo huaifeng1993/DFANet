@@ -43,8 +43,6 @@ class Trainer(object):
             print('Epoch {}/{}'.format(epoch, num_epochs - 1))
             for phase in ['train', 'val']:
                 if phase == 'train':
-                    if self.scheduler:
-                        self.scheduler.step()
                     self.model.train()
                 else:
                     self.model.eval()
@@ -77,6 +75,8 @@ class Trainer(object):
                         if phase == 'train':
                             loss.backward()
                             self.optim.step()
+                            if self.scheduler:
+                                 self.scheduler.step(loss.cpu().data.numpy())
                     # statistics
                     total += inputs.size(0)
                     running_loss += loss.item() * inputs.size(0)

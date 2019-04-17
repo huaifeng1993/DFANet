@@ -122,7 +122,6 @@ class fcattention(nn.Module):
             nn.ReLU()
         )
 
-
     def forward(self,x):
         b,c,_,_=x.size()
         y=self.avg_pool(x).view(b,c)
