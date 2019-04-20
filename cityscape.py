@@ -117,15 +117,14 @@ class DatasetTrain(torch.utils.data.Dataset):
         # print (label_img.shape)
         
         # cv2.imshow("test", img)
-        # cv2.waitKey(0)
-        
+        # cv2.waitKey(0）
         # cv2.imshow("test", label_img)
         # cv2.waitKey(0)
         # # # # # # # # debug visualization END
 
         # normalize the img (with the mean and std for the pretrained ResNet):
         img = img/255.0
-        img = img - np.array([0.485, 0.456, 0.406])
+        img = img - np.array([0.485, 0.456, 0.406])             
         img = img/np.array([0.229, 0.224, 0.225]) # (shape: (1024, 1024, 3))
         img = np.transpose(img, (2, 0, 1)) # (shape: (3, 1024, 1024))
         img = img.astype(np.float32)
@@ -176,7 +175,7 @@ class DatasetVal(torch.utils.data.Dataset):
 
         img_id = example["img_id"]
 
-        img_path = example["img_path"]
+        img_path = example["img_path"] 
         img = cv2.imread(img_path, -1) # (shape: (1024, 2048, 3))
         # resize img without interpolation (want the image to still match
         # label_img, which we resize below):

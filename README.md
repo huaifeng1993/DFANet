@@ -31,13 +31,13 @@ run the command  'python main.py'
 
 ### To do
 
-- [x] Train the backbone xceptionA on the ImageNet-1k.
+- [ ] Train the backbone xceptionA on the ImageNet-1k.
 
-- [x] Modify the network and improve the accuracy.
+- [ ] Modify the network and improve the accuracy.
 
-- [x] Debug and report the performance.
+- [ ] Debug and report the performance.
 
-- [x] Schedule the lr
+- [ ] Schedule the lr
 
 under construction...
 

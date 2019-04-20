@@ -1,93 +1,98 @@
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.autograd import Variable
-import numpy as np
-import scipy.ndimage as nd
+from distutils.version import LooseVersion
+
+class CrossEntropyLoss2d(nn.Module):
+    def __init__(self, weight=None, size_average=False, ignore_index=255):
+        super(CrossEntropyLoss2d, self).__init__()
+        self.nll_loss = nn.NLLLoss2d(weight, size_average, ignore_index)
+
+    def forward(self, inputs, targets):
+        return self.nll_loss(F.log_softmax(inputs), targets)
+
+def cross_entropy2d(input, target, weight=None, size_average=True):
+    # input: (n, c, h, w), target: (n, h, w)
+    n, c, h, w = input.size()
+    # log_p: (n, c, h, w)
+    if LooseVersion(torch.__version__) < LooseVersion('0.3'):
+        # ==0.2.X
+        log_p = F.log_softmax(input).cuda()
+    else:
+        # >=0.3
+        log_p = F.log_softmax(input, dim=1).cuda()
+    # log_p: (n*h*w, c)
+    log_p = log_p.transpose(1, 2).transpose(2, 3).contiguous()
+    log_p = log_p[target.view(n, h, w, 1).repeat(1, 1, 1, c) >= 0]
+    log_p = log_p.view(-1, c)
+    # target: (n*h*w,)
+    # mask = (target != 255)
+    # target = target[mask]
+    loss = F.nll_loss(log_p, target, weight=weight, size_average=False, ignore_index=255).cuda()
+    if size_average:
+        loss /= (n*h*w)
+    return loss
+
+class FocalLoss2d(nn.Module):
+    def __init__(self, gamma=2., weight=None, size_average=True, ignore_index=255):
+        super(FocalLoss2d, self).__init__()
+        self.gamma = gamma
+        self.nll_loss = nn.NLLLoss2d(weight, size_average, ignore_index)
+
+    def forward(self, inputs, targets):
+        return self.nll_loss((1 - F.softmax(inputs)) ** self.gamma * F.log_softmax(inputs), targets)
 
 
-class OhemCrossEntropy2d(nn.Module):
+class FocalLoss(nn.Module):
+    """
+        This criterion is a implemenation of Focal Loss, which is proposed in
+        Focal Loss for Dense Object Detection.
 
-    def __init__(self, ignore_label=255, thresh=0.7, min_kept=100000, factor=8):
-        super(OhemCrossEntropy2d, self).__init__()
-        self.ignore_label = ignore_label
-        self.thresh = float(thresh)
-        # self.min_kept_ratio = float(min_kept_ratio)
-        self.min_kept = int(min_kept)
-        self.factor = factor
-        self.criterion = torch.nn.CrossEntropyLoss(ignore_index=ignore_label)
+            Loss(x, class) = - \alpha (1-softmax(x)[class])^gamma \log(softmax(x)[class])
 
-    def find_threshold(self, np_predict, np_target):
-        # downsample 1/8
-        factor = self.factor
-        predict = nd.zoom(np_predict, (1.0, 1.0, 1.0/factor, 1.0/factor), order=1)
-        target = nd.zoom(np_target, (1.0, 1.0/factor, 1.0/factor), order=0)
+        The losses are averaged across observations for each minibatch.
+        Args:
+            alpha(1D Tensor, Variable) : the scalar factor for this criterion
+            gamma(float, double) : gamma > 0
+            size_average(bool): size_average(bool): By default, the losses are averaged over observations for each minibatch.
+                                However, if the field size_average is set to False, the losses are
+                                instead summed for each minibatch.
+    """
 
-        n, c, h, w = predict.shape
-        min_kept = self.min_kept // (factor*factor) #int(self.min_kept_ratio * n * h * w)
+    def __init__(self, class_num, alpha=None, gamma=2, size_average=True):
+        super(FocalLoss, self).__init__()
+        if alpha is None:
+            self.alpha = Variable(torch.ones(class_num+1))
+        else:
+            if isinstance(alpha, Variable):
+                self.alpha = alpha
+            else:
+                self.alpha = Variable(alpha)
+        self.gamma = gamma
+        self.class_num = class_num
+        self.size_average = size_average
 
-        input_label = target.ravel().astype(np.int32)
-        input_prob = np.rollaxis(predict, 1).reshape((c, -1))
+    def forward(self, inputs, targets):  # variables
+        P = F.softmax(inputs)
 
-        valid_flag = input_label != self.ignore_label
-        valid_inds = np.where(valid_flag)[0]
-        label = input_label[valid_flag]
-        num_valid = valid_flag.sum()
-        if min_kept >= num_valid:
-            threshold = 1.0
-        elif num_valid > 0:
-            prob = input_prob[:,valid_flag]
-            pred = prob[label, np.arange(len(label), dtype=np.int32)]
-            threshold = self.thresh
-            if min_kept > 0:
-                k_th = min(len(pred), min_kept)-1
-                new_array = np.partition(pred, k_th)
-                new_threshold = new_array[k_th]
-                if new_threshold > self.thresh:
-                    threshold = new_threshold
-        return threshold
+        b,c,h,w = inputs.size()
+        class_mask = Variable(torch.zeros([b,c+1,h,w]).cuda())
+        class_mask.scatter_(1, targets.long(), 1.)
+        class_mask = class_mask[:,:-1,:,:]
 
+        if inputs.is_cuda and not self.alpha.is_cuda:
+            self.alpha = self.alpha.cuda()
+        # print('alpha',self.alpha.size())
+        alpha = self.alpha[targets.data.view(-1)].view_as(targets)
+        # print (alpha.size(),class_mask.size(),P.size())
+        probs = (P * class_mask).sum(1)  # + 1e-6#.view(-1, 1)
+        log_p = probs.log()
 
-    def generate_new_target(self, predict, target):
-        np_predict = predict.data.cpu().numpy()
-        np_target = target.data.cpu().numpy()
-        n, c, h, w = np_predict.shape
+        batch_loss = -alpha * (torch.pow((1 - probs), self.gamma)) * log_p
 
-        threshold = self.find_threshold(np_predict, np_target)
-
-        input_label = np_target.ravel().astype(np.int32)
-        input_prob = np.rollaxis(np_predict, 1).reshape((c, -1))
-
-        valid_flag = input_label != self.ignore_label
-        valid_inds = np.where(valid_flag)[0]
-        label = input_label[valid_flag]
-        num_valid = valid_flag.sum()
-
-        if num_valid > 0:
-            prob = input_prob[:,valid_flag]
-            pred = prob[label, np.arange(len(label), dtype=np.int32)]
-            kept_flag = pred <= threshold
-            valid_inds = valid_inds[kept_flag]
-            print('Labels: {} {}'.format(len(valid_inds), threshold))
-
-        label = input_label[valid_inds].copy()
-        input_label.fill(self.ignore_label)
-        input_label[valid_inds] = label
-        new_target = torch.from_numpy(input_label.reshape(target.size())).long().cuda(target.get_device())
-
-        return new_target
-
-
-    def forward(self, predict, target, weight=None):
-        """
-            Args:
-                predict:(n, c, h, w)
-                target:(n, h, w)
-                weight (Tensor, optional): a manual rescaling weight given to each class.
-                                           If given, has to be a Tensor of size "nclasses"
-        """
-        assert not target.requires_grad
-
-        input_prob = F.softmax(predict, 1)
-        target = self.generate_new_target(input_prob, target)
-        return self.criterion(predict, target)
+        if self.size_average:
+            loss = batch_loss.mean()
+        else:
+            loss = batch_loss.sum()
+        return loss
