@@ -1,7 +1,8 @@
 # DFANet
 This repo is an unofficial pytorch implementation of DFANet:Deep Feature Aggregation for Real-Time Semantic Segmentation
 # log
-* 2019.4.16  Afater 483 epoches it rases RuntimeError: value cannot be converted to type float without overflow: (9.85073e-06,-3.2007e-06).According to the direcation of stackoverflow the error can be fixed by modifying "self.scheduler.step()" to "self.scheduler.step(loss.cpu().data.numpy())" in train.py.
+* 2019.4.16  Afater 483 epoches it rases RuntimeError: value cannot be converted to type float without overflow: (9.85073e-06,-3.2007e-06).According to the direcation of stackoverflow the error can be fixed by modifying "self.scheduler.step()" to "self.scheduler.step(loss.cpu().data.numpy())" in train.py.But the loss and iou become very bad descriped on "curvs on CityScape set"。 
+
 
 ### Installation
 
@@ -25,9 +26,9 @@ Modify your configuration in `main.py`.
 run the command  'python main.py'
 ```
 
-### Segmentation results on CityScape set
+### curvs on CityScape set
 
-![](/image/image.png)
+![](https://github.com/huaifeng1993/DFANet/blob/master/results/DeepinScreenshot_select-area_20190418170943.png)
 
 ### To do
 
@@ -37,7 +38,7 @@ run the command  'python main.py'
 
 - [ ] Debug and report the performance.
 
-- [ ] Schedule the lr
+- [x] Schedule the lr
 
 under construction...
 
