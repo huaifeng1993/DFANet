@@ -32,7 +32,7 @@ run the command  'python main.py'
 
 ### To do
 
-- [ ] Train the backbone xceptionA on the ImageNet-1k.
+- [x] Train the backbone xceptionA on the ImageNet-1k.
 
 - [ ] Modify the network and improve the accuracy.
 
