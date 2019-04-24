@@ -273,7 +273,40 @@ class xceptionAx3(nn.Module):
         result=F.interpolate(result,x.size()[2:],mode='bilinear',align_corners=False)
         #print(result.size())
         return result
+def dfanet(pretrained=False, **kwargs):
+    """
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = xceptionAx3(**kwargs)
+    if pretrained:
+        print("loading pretrained model.....")
+        pretrained_params=torch.load('model_ilsvrc_xeception_0022.pt')['model_state_dict']
+        new_state_dict=pretrained_params.copy()
+        for key in pretrained_params.keys():
+            if  key.find('enc2')>0:
+                for x in ['enc2a','enc2b','enc2c']:
+                    new_key=key.replace('enc2',x)
+                    new_state_dict[new_key]=pretrained_params[key]
+            if not key.find('enc3')>0:
+                for x in ['enc3a','enc3b','enc3c']:
+                    new_key=key.replace('enc3',x)
+                    new_state_dict[new_key]=pretrained_params[key]  
+            if not key.find('enc4')>0:
+                for x in ['enc4a','enc4b','enc4c']:
+                    new_key=key.replace('enc4',x)
+                    new_state_dict[new_key]=pretrained_params[key]
+        pop_keys=[]
+        for key in new_state_dict.keys():
+            if  key.find('reps.0.first_conv.0.')>0:
+                pop_keys.append(key)
+            if key.find('.reps.0.skip.weight')>0:
+                pop_keys.append(key)
 
+        for key in pop_keys:
+            new_state_dict.pop(key)
+        model.load_state_dict(new_state_dict,strict=False)
+    return model
 if __name__ =="__main__":
     from torch.nn import CrossEntropyLoss
 
