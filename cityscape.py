@@ -189,6 +189,9 @@ class DatasetVal(torch.utils.data.Dataset):
         label_img = cv2.resize(label_img, (self.new_img_w, self.new_img_h),
                                interpolation=cv2.INTER_NEAREST) # (shape: (512, 1024))
 
+        #center crop.image_size =(512,512)
+        img = img[:, 256:768] # (shape: (1024, 1024, 3))
+        label_img = label_img[:, 256:768] # (shape: (1024, 1024))
         # # # # # # # # debug visualization START
         # cv2.imshow("test", img)
         # cv2.waitKey(0)
@@ -325,4 +328,5 @@ if __name__=='__main__':
     print(labs.size())
 
     img,labs=val_dataset[0]
+    print(img.size())
     print(labs.size())     
