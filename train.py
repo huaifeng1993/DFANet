@@ -76,7 +76,8 @@ class Trainer(object):
                             loss.backward()
                             self.optim.step()
                             if self.scheduler:
-                                 self.scheduler.step(loss.cpu().data.numpy())
+                                 #self.scheduler.step(loss.cpu().data.numpy())
+                                 self.scheduler.step()
                     # statistics
                     total += inputs.size(0)
                     running_loss += loss.item() * inputs.size(0)

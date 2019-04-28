@@ -32,11 +32,11 @@ if __name__=='__main__':
     optimizer = optim.SGD(
     net.parameters(), lr=0.5, momentum=0.9,weight_decay=0.00001)  #select the optimizer
 
-    lr_fc=lambda iteration: (1-iteration/160000)**0.9
+    lr_fc=lambda iteration: (1-iteration/400000)**0.9
 
     exp_lr_scheduler = lr_scheduler.LambdaLR(optimizer,lr_fc,-1)
     trainer = Trainer('training', optimizer,exp_lr_scheduler, net, cfg, './log')
     #trainer.load_weights(trainer.find_last())
-    trainer.train(train_loader, val_loader, criterion, 640)
-    #trainer.evaluate(valid_loader)
+    trainer.train(train_loader, val_loader, criterion, 1500)
+    trainer.evaluate(valid_loader)
     print('Finished Training')

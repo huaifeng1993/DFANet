@@ -184,8 +184,7 @@ class xceptionAx3(nn.Module):
                                       nn.BatchNorm2d(32),
                                       nn.ReLU())
         self.last_conv=nn.Sequential(nn.Conv2d(32,num_classes,kernel_size=1,stride=1,bias=False),
-                                      nn.BatchNorm2d(num_classes),
-                                      nn.ReLU())
+                                      nn.BatchNorm2d(num_classes))
 
     def forward(self, x):
         #backbone stage a
