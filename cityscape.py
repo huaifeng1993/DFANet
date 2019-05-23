@@ -190,8 +190,8 @@ class DatasetVal(torch.utils.data.Dataset):
                                interpolation=cv2.INTER_NEAREST) # (shape: (512, 1024))
 
         #center crop.image_size =(512,512)
-        img = img[:, 256:768] # (shape: (1024, 1024, 3))
-        label_img = label_img[:, 256:768] # (shape: (1024, 1024))
+        #img = img[:, 256:768] # (shape: (1024, 1024, 3))
+        #label_img = label_img[:, 256:768] # (shape: (1024, 1024))
         # # # # # # # # debug visualization START
         # cv2.imshow("test", img)
         # cv2.waitKey(0)
@@ -208,7 +208,7 @@ class DatasetVal(torch.utils.data.Dataset):
         img = img.astype(np.float32)
 
         # convert numpy -> torch:
-        #img = torch.from_numpy(img) # (shape: (3, 512, 1024))
+        img = torch.from_numpy(img) # (shape: (3, 512, 1024))
         label_img=torch.LongTensor(label_img) # (shape: (512, 1024))
 
         return (img, label_img)

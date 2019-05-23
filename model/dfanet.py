@@ -183,8 +183,7 @@ class xceptionAx3(nn.Module):
         self.merge_conv=nn.Sequential(nn.Conv2d(32,32,kernel_size=1,stride=1,bias=False),
                                       nn.BatchNorm2d(32),
                                       nn.ReLU())
-        self.last_conv=nn.Sequential(nn.Conv2d(32,num_classes,kernel_size=1,stride=1,bias=False),
-                                      nn.BatchNorm2d(num_classes))
+        self.last_conv=nn.Sequential(nn.Conv2d(32,num_classes,kernel_size=1,stride=1,bias=False))
 
     def forward(self, x):
         #backbone stage a
@@ -280,7 +279,7 @@ def dfanet(pretrained=False, **kwargs):
     model = xceptionAx3(**kwargs)
     if pretrained:
         print("loading pretrained model.....")
-        pretrained_params=torch.load('model_ilsvrc_xeception_0022.pt')['model_state_dict']
+        pretrained_params=torch.load('model_ilsvrc_xeception_0056.pt')['model_state_dict']
         new_state_dict=pretrained_params.copy()
         for key in pretrained_params.keys():
             if  key.find('enc2')>0:

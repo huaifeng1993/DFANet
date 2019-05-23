@@ -4,6 +4,9 @@ This repo is an unofficial pytorch implementation of DFANet:Deep Feature Aggrega
 * 2019.4.16  After 483 epoches it rases RuntimeError: value cannot be converted to type float without overflow: (9.85073e-06,-3.2007e-06).According to the direction of the stackoverflow the error can be fixed by modifying "self.scheduler.step()" to "self.scheduler.step(loss.cpu().data.numpy())" in train.py. 
 * 2019.4.24 An function has been writed to load the pretrained model which  was trained on imagenet-1k.The project of training the backbone can be Downloaded from here -https://github.com/huaifeng1993/ILSVRC2012. Limited to my computing resources(only have one RTX2080),I  trained the backbone on ILSVRC2012 with only 22 epochs.But it have a great impact on the results.
 
+* 2019.5.23 It's hard to improve the performance of the model.May be the model's details are different from the original paper's or the hyperparameters  ....or the training strategy...or something else...
+
+
 ### Installation
 
 * pytorch==1.0.0
@@ -28,7 +31,7 @@ run the command  'python main.py'
 
 ### curvs on CityScape set
 
-![](results/curvs.png)
+![](results/2.png)
 
 ### To do
 
@@ -40,7 +43,7 @@ run the command  'python main.py'
 
 - [x] Schedule the lr
 
-- [ ]...
+- [ ] ...
 
 ### Thanks
 
