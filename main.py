@@ -7,7 +7,7 @@ from train import Trainer
 from torch.nn import CrossEntropyLoss
 import torch.optim as optim
 from torch.optim import lr_scheduler
-from model.dfanet import dfanet
+from model.dfanet import DFANet
 from config import Config
 from loss import CrossEntropyLoss2d
 
@@ -26,7 +26,9 @@ if __name__=='__main__':
     val_loader = DataLoader(dataset=val_dataset,
                                          batch_size=10, shuffle=False, 
                                          num_workers=8)
-    net = dfanet(pretrained=True,num_classes=20)
+                                         
+    net = DFANet(cfg.ENCODER_CHANNEL_CFG,decoder_channel=64,num_classes=20)
+
     #load loss
     criterion = CrossEntropyLoss()
     optimizer = optim.SGD(
