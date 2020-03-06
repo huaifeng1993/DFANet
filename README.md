@@ -6,6 +6,8 @@ This repo is an unofficial pytorch implementation of DFANet:Deep Feature Aggrega
 
 * 2019.5.23 It's hard to improve the performance of the model.May be the model's details are different from the original paper's or the hyperparameters  ....or the training strategy...or something else...
 
+* 2020.3.7 rewrited some code of this rep which make the code more modular(model/dfanet.py).
+
 
 ### Installation
 
