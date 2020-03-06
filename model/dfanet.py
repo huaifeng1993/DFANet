@@ -200,7 +200,7 @@ class DFANet(nn.Module):
         self.encoder=DFA_Encoder(channel_cfg)
         self.decoder=DFA_Decoder(decoder_channel,num_classes)
         weight_init(self.encoder)
-        weight_init(self.encoder)
+        weight_init(self.decoder)
     def forward(self,x):
         x0,x1,x2,x3,x4,x5=self.encoder(x)
         x=self.decoder(x0,x1,x2,x3,x4,x5)
@@ -208,7 +208,7 @@ class DFANet(nn.Module):
 
 
 def weight_init(module):
-    print('initialize  ',module._get_name())
+    #print('initialize  ',module._get_name())
     for n,m in module.named_children():
         if isinstance(m,nn.Conv2d):
             nn.init.kaiming_normal_(m.weight,mode='fan_in',nonlinearity='relu')
@@ -235,6 +235,45 @@ def weight_init(module):
         else:
             pass
 
+def load_backbone(dfanet,backbone_path):
+    """
+    load pretrained model from backbone.
+    dfanet:graph of Dfanet.
+    backbone_path:the path of pretrained model which only saved  state dict of backbone.
+    return: graph of Dfanet with pretraind params.
+    """
+    bk_params=torch.load(backbone_path)
+    df_params=dfanet.state_dict()
+    bk_keys=bk_params.keys()
+
+    for key in bk_keys:
+        if key.split('.')[0]=='conv1':
+            new_key='encoder.'+key
+            if df_params[new_key].size()==bk_params[key].size():
+                df_params[new_key]=bk_params[key]
+
+        if 'branch' in key.split('.'):
+            new_key="encoder."+key 
+            new_key=new_key.replace('branch','branch0')
+            if bk_params[key].size()==df_params[new_key].size():
+                df_params[new_key]=bk_params[key]
+            else:
+                print("uninit ",new_key)
+                
+            new_key=new_key.replace('branch0','branch1')
+            if bk_params[key].size()==df_params[new_key].size():
+                df_params[new_key]=bk_params[key]
+            else:
+                print("uninit ",new_key)
+                 
+            new_key=new_key.replace('branch1','branch2')
+            if bk_params[key].size()==df_params[new_key].size():
+                df_params[new_key]=bk_params[key]
+            else:
+                print("uninit ",new_key)
+                
+    dfanet.load_state_dict(df_params)
+    return dfanet
 
 
 if __name__=='__main__':
@@ -243,12 +282,21 @@ if __name__=='__main__':
             [240,144,288]]
 
     #backbone test.
-    net=XceptionA(ch_cfg[0],num_classes=19)
+    bk=XceptionA(ch_cfg[0],num_classes=19)
+    torch.save(bk.state_dict(),'./backbone.pth')
+
+    dfa=DFANet(ch_cfg,64,19)
+    dfa=load_backbone(dfa,'./backbone.pth')
+
+    print("test loading pretrained backbone weight sucessfully...")
+
     input = torch.randn(4, 3, 1024, 1024)
-    outputs=net(input)
+    outputs=bk(input)
     print(outputs.size())
+    print("test bcakbone ,XceptionA, sucessfully...")
 
     #decoder test
     net=DFANet(ch_cfg,64,19)
     outputs=net(input)
     print(outputs.size())
+    print("test DFANet sucessfully...")
