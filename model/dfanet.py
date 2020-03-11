@@ -2,6 +2,7 @@
 # Licensed under The MIT License [see LICENSE for details]
 # Written by SHEN HUIXIANG  (shhuixi@qq.com)
 # Created On: 2020-3-06
+# https://github.com/huaifeng1993
 # --------------------------------------------------------
 import math
 import torch
@@ -161,9 +162,9 @@ class DFA_Encoder(nn.Module):
         x=self.conv1(x)
 
         x0,x1,x2,x5=self.branch0(x)
-        x3=F.interpolate(x5,scale_factor=4,mode='bilinear',align_corners=True)
+        x3=F.interpolate(x5,x0.size()[2:],mode='bilinear',align_corners=True)
         x1,x2,x3,x6=self.branch1(torch.cat([x0,x3],1),x1,x2)
-        x4=F.interpolate(x6,scale_factor=4,mode='bilinear',align_corners=True)
+        x4=F.interpolate(x6,x1.size()[2:],mode='bilinear',align_corners=True)
         x2,x3,x4,x7=self.branch2(torch.cat([x1,x4],1),x2,x3)
 
         return [x0,x1,x2,x5,x6,x7]
@@ -176,16 +177,23 @@ class DFA_Decoder(nn.Module):
     def __init__(self,decode_channels,num_classes):
         super(DFA_Decoder,self).__init__()
 
-        self.conv1=nn.Conv2d(in_channels=48,out_channels=decode_channels,kernel_size=1,bias=False)
-        self.conv2=nn.Conv2d(in_channels=192,out_channels=decode_channels,kernel_size=1,bias=False)
-        self.conv3=nn.Conv2d(in_channels=decode_channels,out_channels=num_classes,kernel_size=1,bias=False)
+        self.conv1=nn.Sequential(nn.Conv2d(in_channels=48,out_channels=decode_channels,kernel_size=1,bias=False),
+                                 nn.BatchNorm2d(decode_channels),
+                                 nn.ReLU())
+        self.conv2=nn.Sequential(nn.Conv2d(in_channels=192,out_channels=decode_channels,kernel_size=1,bias=False),
+                                 nn.BatchNorm2d(decode_channels),
+                                 nn.ReLU())
+        self.conv3=nn.Sequential(nn.Conv2d(in_channels=decode_channels,out_channels=num_classes,kernel_size=1,bias=False),
+                                nn.BatchNorm2d(decode_channels),
+                                nn.ReLU())
 
     def forward(self,x0,x1,x2,x3,x4,x5):
-        x1=F.interpolate(x1,scale_factor=2,mode='bilinear',align_corners=True)
-        x2=F.interpolate(x2,scale_factor=4,mode='bilinear',align_corners=True)
-        x3=F.interpolate(x3,scale_factor=4,mode='bilinear',align_corners=True)
-        x4=F.interpolate(x4,scale_factor=8,mode='bilinear',align_corners=True)
-        x5=F.interpolate(x5,scale_factor=16,mode='bilinear',align_corners=True)
+        
+        x1=F.interpolate(x1,x0.size()[2:],mode='bilinear',align_corners=True)
+        x2=F.interpolate(x2,x0.size()[2:],mode='bilinear',align_corners=True)
+        x3=F.interpolate(x3,x0.size()[2:],mode='bilinear',align_corners=True)
+        x4=F.interpolate(x4,x0.size()[2:],mode='bilinear',align_corners=True)
+        x5=F.interpolate(x5,x0.size()[2:],mode='bilinear',align_corners=True)
 
         x_shallow=self.conv1(x0+x1+x2)
         x_deep=self.conv2(x3+x4+x5)
