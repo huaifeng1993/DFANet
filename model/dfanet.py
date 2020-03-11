@@ -183,10 +183,10 @@ class DFA_Decoder(nn.Module):
         self.conv2=nn.Sequential(nn.Conv2d(in_channels=192,out_channels=decode_channels,kernel_size=1,bias=False),
                                  nn.BatchNorm2d(decode_channels),
                                  nn.ReLU())
-        self.conv3=nn.Sequential(nn.Conv2d(in_channels=decode_channels,out_channels=num_classes,kernel_size=1,bias=False),
-                                nn.BatchNorm2d(decode_channels),
-                                nn.ReLU())
-
+        # self.conv3=nn.Sequential(nn.Conv2d(in_channels=decode_channels,out_channels=num_classes,kernel_size=1,bias=False),
+        #                         nn.BatchNorm2d(decode_channels),
+        #                         nn.ReLU())
+        self.conv3=nn.Conv2d(in_channels=decode_channels,out_channels=num_classes,kernel_size=1,bias=False)
     def forward(self,x0,x1,x2,x3,x4,x5):
         
         x1=F.interpolate(x1,x0.size()[2:],mode='bilinear',align_corners=True)
