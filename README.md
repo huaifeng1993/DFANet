@@ -34,7 +34,17 @@ run the command  'python main.py'
 ### curvs on CityScape set
 
 ![](results/2.png)
-
+### inference speed
+platform|input size|batch size|inference time /ms
+ -|-|-|-|-
+rk3399|320*200|1|960
+2080|1024*1024|4|40
+2080|1024*1024|1|16
+2080|2048*1024|1|17
+2080|2048*1024|2|39
+2080|512*512|1|39
+2080|512*512|16|44
+Some experimental results was provided by @ShaoqingGong
 ### To do
 
 - [ ] Train the backbone xceptionA on the ImageNet-1k.

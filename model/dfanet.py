@@ -183,9 +183,10 @@ class DFA_Decoder(nn.Module):
         self.conv2=nn.Sequential(nn.Conv2d(in_channels=192,out_channels=decode_channels,kernel_size=1,bias=False),
                                  nn.BatchNorm2d(decode_channels),
                                  nn.ReLU())
-        self.conv3=nn.Sequential(nn.Conv2d(in_channels=decode_channels,out_channels=num_classes,kernel_size=1,bias=False),
-                                nn.BatchNorm2d(decode_channels),
-                                nn.ReLU())
+        # self.conv3=nn.Sequential(nn.Conv2d(in_channels=decode_channels,out_channels=num_classes,kernel_size=1,bias=False),
+        #                         nn.BatchNorm2d(num_classes),
+        #                         nn.ReLU())
+        self.conv3=nn.Conv2d(in_channels=decode_channels,out_channels=num_classes,kernel_size=1,bias=False)
 
     def forward(self,x0,x1,x2,x3,x4,x5):
         
@@ -285,6 +286,10 @@ def load_backbone(dfanet,backbone_path):
 
 
 if __name__=='__main__':
+   
+    import time
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     ch_cfg=[[8,48,96],
             [240,144,288],
             [240,144,288]]
@@ -298,13 +303,21 @@ if __name__=='__main__':
 
     print("test loading pretrained backbone weight sucessfully...")
 
-    input = torch.randn(4, 3, 1024, 1024)
+    input = torch.randn(16, 3, 512, 512)
+    
     outputs=bk(input)
     print(outputs.size())
     print("test bcakbone ,XceptionA, sucessfully...")
 
     #decoder test
+    input=input.to(device)
     net=DFANet(ch_cfg,64,19)
+    net=net.to(device)
+    net(input)
+    start=time.time()
     outputs=net(input)
+    end=time.time()
+    
     print(outputs.size())
+    print("inference time",end-start)
     print("test DFANet sucessfully...")
