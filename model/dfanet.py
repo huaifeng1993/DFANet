@@ -60,15 +60,19 @@ class enc(nn.Module):
     in_channels:The channels of input feature maps
     out_channnel:the channels of outputs of this enc.
     """
-    def __init__(self,in_channels,out_channels,stride=2):
+    def __init__(self,in_channels,out_channels,stride=2,num_repeat=3):
         super(enc, self).__init__()
-        self.block1=Block(in_channels,out_channels,stride=2)
-        self.block2=Block(out_channels,out_channels)
-        self.block3=Block(out_channels,out_channels)
+        stacks=[Block(in_channels,out_channels,stride=2)]
+        for x in range(num_repeat-1):
+            stacks.append(Block(out_channels,out_channels))
+        self.build=nn.Sequential(*stacks)
+        # self.block1=Block(in_channels,out_channels,stride=2)
+        # self.block2=Block(out_channels,out_channels)
+        # self.block3=Block(out_channels,out_channels)
     def forward(self, x):
-        x=self.block1(x)
-        x=self.block2(x)
-        x=self.block3(x)
+        x=self.build(x)
+        # x=self.block2(x)
+        # x=self.block3(x)
         return x
 
 class Attention(nn.Module):
@@ -101,7 +105,7 @@ class SubBranch(nn.Module):
     def __init__(self,channel_cfg,branch_index):
         super(SubBranch,self).__init__()
         self.enc2=enc(channel_cfg[0],48)
-        self.enc3=enc(channel_cfg[1],96)
+        self.enc3=enc(channel_cfg[1],96,num_repeat=6)
         self.enc4=enc(channel_cfg[2],192)
         self.atten=Attention(192,192)
         self.branch_index=branch_index
@@ -310,9 +314,9 @@ if __name__=='__main__':
     print("test bcakbone ,XceptionA, sucessfully...")
 
     #decoder test
-    input=input.to(device)
+    #input=input.to(device)
     net=DFANet(ch_cfg,64,19)
-    net=net.to(device)
+    #net=net.to(device)
     net(input)
     start=time.time()
     outputs=net(input)
