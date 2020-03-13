@@ -104,9 +104,9 @@ class SubBranch(nn.Module):
     """
     def __init__(self,channel_cfg,branch_index):
         super(SubBranch,self).__init__()
-        self.enc2=enc(channel_cfg[0],48)
+        self.enc2=enc(channel_cfg[0],48,num_repeat=3)
         self.enc3=enc(channel_cfg[1],96,num_repeat=6)
-        self.enc4=enc(channel_cfg[2],192)
+        self.enc4=enc(channel_cfg[2],192,num_repeat=3)
         self.atten=Attention(192,192)
         self.branch_index=branch_index
     
