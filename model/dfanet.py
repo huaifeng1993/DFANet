@@ -255,6 +255,7 @@ def load_backbone(dfanet,backbone_path):
     backbone_path:the path of pretrained model which only saved  state dict of backbone.
     return: graph of Dfanet with pretraind params.
     """
+    print("loading pretrained model....")
     bk_params=torch.load(backbone_path)
     df_params=dfanet.state_dict()
     bk_keys=bk_params.keys()
