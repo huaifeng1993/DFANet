@@ -33,7 +33,7 @@ run the command  'python main.py'
 
 ### curvs on CityScape set
 
-![](results/2.png)
+#![](results/2.png)
 ### inference speed
 
 |platform|input size|batch size|inference time /ms|
