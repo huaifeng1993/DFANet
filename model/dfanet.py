@@ -181,29 +181,45 @@ class DFA_Decoder(nn.Module):
     def __init__(self,decode_channels,num_classes):
         super(DFA_Decoder,self).__init__()
 
+
+        self.conv0=nn.Sequential(nn.Conv2d(in_channels=48,out_channels=decode_channels,kernel_size=1,bias=False),
+                                 nn.BatchNorm2d(decode_channels),
+                                 nn.ReLU(inplace=True))
         self.conv1=nn.Sequential(nn.Conv2d(in_channels=48,out_channels=decode_channels,kernel_size=1,bias=False),
                                  nn.BatchNorm2d(decode_channels),
-                                 nn.ReLU())
-        self.conv2=nn.Sequential(nn.Conv2d(in_channels=192,out_channels=decode_channels,kernel_size=1,bias=False),
+                                 nn.ReLU(inplace=True))
+        self.conv2=nn.Sequential(nn.Conv2d(in_channels=48,out_channels=decode_channels,kernel_size=1,bias=False),
                                  nn.BatchNorm2d(decode_channels),
-                                 nn.ReLU())
-        # self.conv3=nn.Sequential(nn.Conv2d(in_channels=decode_channels,out_channels=num_classes,kernel_size=1,bias=False),
-        #                         nn.BatchNorm2d(num_classes),
-        #                         nn.ReLU())
-        self.conv3=nn.Conv2d(in_channels=decode_channels,out_channels=num_classes,kernel_size=1,bias=False)
+                                 nn.ReLU(inplace=True))
+        self.conv3=nn.Sequential(nn.Conv2d(in_channels=192,out_channels=decode_channels,kernel_size=1,bias=False),
+                                 nn.BatchNorm2d(decode_channels),
+                                 nn.ReLU(inplace=True))
+        self.conv4=nn.Sequential(nn.Conv2d(in_channels=192,out_channels=decode_channels,kernel_size=1,bias=False),
+                                 nn.BatchNorm2d(decode_channels),
+                                 nn.ReLU(inplace=True))
+        self.conv5=nn.Sequential(nn.Conv2d(in_channels=192,out_channels=decode_channels,kernel_size=1,bias=False),
+                                 nn.BatchNorm2d(decode_channels),
+                                 nn.ReLU(inplace=True))
+
+        self.conv_add1=nn.Sequential(nn.Conv2d(in_channels=decode_channels,out_channels=decode_channels,kernel_size=3,padding=1),
+                                 nn.BatchNorm2d(decode_channels),
+                                 nn.ReLU(inplace=True))
+                                
+
+        self.conv_cls=nn.Conv2d(in_channels=decode_channels,out_channels=num_classes,kernel_size=3,padding=1,bias=False)
 
     def forward(self,x0,x1,x2,x3,x4,x5):
-        
-        x1=F.interpolate(x1,x0.size()[2:],mode='bilinear',align_corners=True)
-        x2=F.interpolate(x2,x0.size()[2:],mode='bilinear',align_corners=True)
-        x3=F.interpolate(x3,x0.size()[2:],mode='bilinear',align_corners=True)
-        x4=F.interpolate(x4,x0.size()[2:],mode='bilinear',align_corners=True)
-        x5=F.interpolate(x5,x0.size()[2:],mode='bilinear',align_corners=True)
 
-        x_shallow=self.conv1(x0+x1+x2)
-        x_deep=self.conv2(x3+x4+x5)
+        x0=self.conv0(x0)
+        x1=F.interpolate(self.conv1(x1),x0.size()[2:],mode='bilinear',align_corners=True)
+        x2=F.interpolate(self.conv2(x2),x0.size()[2:],mode='bilinear',align_corners=True)
+        x3=F.interpolate(self.conv3(x3),x0.size()[2:],mode='bilinear',align_corners=True)
+        x4=F.interpolate(self.conv5(x4),x0.size()[2:],mode='bilinear',align_corners=True)
+        x5=F.interpolate(self.conv5(x5),x0.size()[2:],mode='bilinear',align_corners=True)
 
-        x=self.conv3(x_shallow+x_deep)
+        x_shallow=self.conv_add1(x0+x1+x2)
+
+        x=self.conv_cls(x_shallow+x3+x4+x5)
         x=F.interpolate(x,scale_factor=4,mode='bilinear',align_corners=True)
         return x
 
@@ -302,6 +318,7 @@ if __name__=='__main__':
     #backbone test.
     bk=XceptionA(ch_cfg[0],num_classes=19)
     torch.save(bk.state_dict(),'./backbone.pth')
+    bk=bk.to(device)
 
     dfa=DFANet(ch_cfg,64,19)
     dfa=load_backbone(dfa,'./backbone.pth')
@@ -309,6 +326,7 @@ if __name__=='__main__':
     print("test loading pretrained backbone weight sucessfully...")
 
     input = torch.randn(16, 3, 512, 512)
+    input=input.to(device)
     
     outputs=bk(input)
     print(outputs.size())
@@ -317,7 +335,7 @@ if __name__=='__main__':
     #decoder test
     #input=input.to(device)
     net=DFANet(ch_cfg,64,19)
-    #net=net.to(device)
+    net=net.to(device)
     net(input)
     start=time.time()
     outputs=net(input)
